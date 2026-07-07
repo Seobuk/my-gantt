@@ -10,7 +10,11 @@
 
 No build. No framework. No account. Your data stays on your machine.
 
+**English** · [한국어](README.ko.md)
+
 ### 👉 [**Live demo**](https://seobuk.github.io/my-gantt/) — try it right in your browser
+
+<img src="docs/screenshot.png" width="820" alt="My Gantt screenshot — day-level WBS Gantt chart with a 3-level project tree, roll-up bars, and a today line">
 
 </div>
 
