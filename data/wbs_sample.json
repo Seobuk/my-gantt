@@ -1,0 +1,63 @@
+[
+  {
+    "name": "Website Redesign",
+    "co": "Design",
+    "col": "#2a78d6",
+    "children": [
+      { "name": "Research & Wireframes", "s": "2025-09-01", "e": "2025-11-30", "pr": 100 },
+      { "name": "Visual Design",         "s": "2025-12-01", "e": "2026-02-28", "pr": 100 },
+      { "name": "Development",           "s": "2026-03-01", "e": "2026-08-31", "pr": 70 },
+      { "name": "Launch & QA",           "s": "2026-09-01", "e": "2026-10-31", "pr": 0 }
+    ]
+  },
+  {
+    "name": "Mobile App",
+    "co": "Product",
+    "col": "#1baf7a",
+    "children": [
+      {
+        "name": "iOS",
+        "children": [
+          { "name": "Design", "s": "2026-01-01", "e": "2026-03-31", "pr": 100 },
+          { "name": "Build",  "s": "2026-04-01", "e": "2026-09-30", "pr": 55 }
+        ]
+      },
+      {
+        "name": "Android",
+        "children": [
+          { "name": "Design", "s": "2026-02-01", "e": "2026-04-30", "pr": 80 },
+          { "name": "Build",  "s": "2026-05-01", "e": "2026-11-30", "pr": 30 }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Marketing Campaign",
+    "co": "Growth",
+    "col": "#e09600",
+    "children": [
+      { "name": "Content Plan",     "s": "2026-05-01", "e": "2026-07-31", "pr": 60 },
+      { "name": "Social Rollout",   "s": "2026-08-01", "e": "2026-11-30", "pr": 0 },
+      { "name": "Analytics Review", "s": "2026-12-01", "e": "2026-12-31", "pr": 0 }
+    ]
+  },
+  {
+    "name": "Research Track",
+    "co": "R&D",
+    "col": "#7f77dd",
+    "children": [
+      { "name": "Literature Survey", "s": "2025-06-01", "e": "2025-12-31", "pr": 100 },
+      { "name": "Prototype",         "s": "2026-01-01", "e": "2026-09-30", "pr": 45 },
+      { "name": "Paper Draft",       "s": "2026-10-01", "e": "2027-03-31", "pr": 0 }
+    ]
+  },
+  {
+    "name": "Data Platform",
+    "co": "Infra",
+    "col": "#eb6834",
+    "children": [
+      { "name": "MVP",         "s": "2025-11-01", "e": "2026-03-31", "pr": 100 },
+      { "name": "Scale & Ops", "s": "2026-04-01", "e": "2027-12-31", "pr": 35 }
+    ]
+  }
+]
