@@ -122,9 +122,9 @@ my-gantt/
 
 ## Contributing
 
-Issues and PRs welcome. Good first contributions: UI internationalization (i18n),
-PNG/SVG export, or a static report generator. See [CLAUDE.md](./CLAUDE.md) for the
-data schema and design principles before making changes.
+Issues and PRs welcome — start from the **[🗺️ roadmap & good first issues](https://github.com/Seobuk/my-gantt/issues)**.
+Beginner-friendly picks: UI internationalization (i18n) and PNG export. See
+[CLAUDE.md](./CLAUDE.md) for the data schema and design principles before making changes.
 
 ## License
 
