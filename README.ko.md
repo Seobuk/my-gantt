@@ -122,8 +122,8 @@ my-gantt/
 
 ## 기여
 
-이슈와 PR 모두 환영합니다. 첫 기여로 좋은 것: UI 다국어화(i18n),
-PNG/SVG 내보내기, 정적 리포트 생성기 등. 변경 전에 데이터 스키마와
+이슈와 PR 모두 환영합니다 — **[🗺️ 로드맵 & good first issues](https://github.com/Seobuk/my-gantt/issues)**부터 보세요.
+입문용으로 좋은 것: UI 다국어화(i18n), PNG 내보내기. 변경 전에 데이터 스키마와
 설계 원칙은 [CLAUDE.md](./CLAUDE.md)를 참고하세요.
 
 ## 라이선스
