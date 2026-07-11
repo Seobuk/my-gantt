@@ -48,7 +48,8 @@ HTML은 다음 순서로 데이터를 처리한다:
 2. 편집 때마다 `POST /api/wbs` 로 서버 저장 + localStorage 동시 백업
 
 > HTML은 **이중 모드**다. 서버가 있으면 파일에, 없으면 localStorage에 저장한다.
-> 이 동작(`web/projects_gantt.html`의 `init()`, `saveData()`, `applyData()`)을 깨지 않도록 주의.
+> 이 동작(`web/projects_gantt.html`의 `init()`, `saveLocal()`/`pushServer()`/`scheduleSave()`/`saveNow()`, `applyData()`)을 깨지 않도록 주의.
+> 저장은 데이터가 바뀔 때만 일어난다(600ms 디바운스). 렌더링(`render()`)은 저장을 트리거하지 않는다.
 
 ---
 
