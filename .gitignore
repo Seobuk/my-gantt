@@ -6,3 +6,4 @@ __pycache__/
 # 사용자의 실제 일정 데이터 — 서버가 저장 시 생성. 커밋하지 않는다.
 # (앱은 없으면 data/wbs_sample.json 으로 시작한다)
 data/wbs.json
+data/wbs.json.tmp

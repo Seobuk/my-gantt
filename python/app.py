@@ -42,8 +42,11 @@ def save_wbs():
     if not isinstance(data, list):
         return jsonify({"ok": False, "error": "expected a JSON array"}), 400
     os.makedirs(DATA_DIR, exist_ok=True)
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
+    # 임시 파일에 쓴 뒤 교체: 쓰는 도중 죽어도 wbs.json이 깨지지 않는다
+    tmp_path = DATA_FILE + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp_path, DATA_FILE)
     return jsonify({"ok": True, "count": len(data)})
 
 
