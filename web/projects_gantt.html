@@ -94,6 +94,7 @@
   .ed .prw{display:flex;align-items:center;gap:11px}
   .ed .prv{font-size:14px;font-weight:700;min-width:42px;font-variant-numeric:tabular-nums}
   .ed .dur{font-size:12px;color:var(--ink3)}
+  .ed .durIn{width:64px;font-size:12px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 6px;text-align:right}
   .act{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;align-items:center}
   .act button{font:inherit;font-size:13px;padding:7px 14px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--ink);cursor:pointer}
   .act button:hover{border-color:var(--ink3)}
@@ -137,6 +138,9 @@
       <button class="tbtn" id="expandBtn">모두 펼치기</button>
       <button class="tbtn" id="collapseBtn">모두 접기</button>
       <button class="tbtn" id="backupBtn">백업 복사</button>
+      <button class="tbtn" id="csvExpBtn">CSV 내보내기</button>
+      <button class="tbtn" id="csvImpBtn">CSV 가져오기</button>
+      <input type="file" id="csvFile" accept=".csv,.tsv,.txt" style="display:none">
       <button class="tbtn pri" id="exportBtn">WBS 업데이트</button>
       <button class="tbtn" id="resetBtn2">초기화</button>
       <span id="saveMsg" style="font-size:13px;font-weight:600;align-self:center"></span>
@@ -432,7 +436,7 @@
       ed.innerHTML='<label>시작일<input type="date" id="ed-s" value="'+esc(n.s)+'" min="'+Y0+'-01-01" max="'+Y1+'-12-31"></label>'+
         '<label>종료일<input type="date" id="ed-e" value="'+esc(n.e)+'" min="'+Y0+'-01-01" max="'+Y1+'-12-31"></label>'+
         '<label>진행률<div class="prw"><input type="range" min="0" max="100" step="5" value="'+n.pr+'" id="ed-pr"><span class="prv" id="ed-prv">'+n.pr+'%</span></div></label>'+
-        '<span class="dur" id="ed-dur">'+(idx(n.e)-idx(n.s)+1)+'일</span>';
+        '<label>기간(일)<input class="durIn" id="ed-dur" type="number" min="1" value="'+(idx(n.e)-idx(n.s)+1)+'" title="기간을 바꾸면 시작일은 그대로 두고 종료일이 이동합니다"></label>';
       el.appendChild(ed);
       var pb=document.createElement("div");pb.className="pbar";pb.style.background=rgba(col,.18);
       pb.innerHTML='<div id="ed-fill" style="height:100%;width:'+n.pr+'%;background:'+esc(col)+'"></div>';
@@ -473,7 +477,11 @@
       var commit=function(){var v=inp.value.trim();if(v)n.name=v;if(coEl)n.co=coEl.value.trim();ST.editing=false;renderSave();};
       var cancel=function(){ST.editing=false;detail();};
       var maybeCommit=function(){setTimeout(function(){if(!ST.editing)return;var a=document.activeElement;if(a&&(a.id==="ed-name"||a.id==="ed-co"))return;commit();},120);};
-      var keyer=function(ev){if(ev.key==="Enter"){commit();}else if(ev.key==="Escape"){cancel();}};
+      var keyer=function(ev){if(ev.key==="Enter"){
+        // Enter+Ctrl(⌘)=하위 추가, Enter+Shift=형제 추가 — 확정과 동시에 다음 항목을 이어 만든다
+        var mkChild=(ev.ctrlKey||ev.metaKey),mkSib=!mkChild&&ev.shiftKey;
+        commit();if(mkChild)addChild(n);else if(mkSib)addSibling(n);
+      }else if(ev.key==="Escape"){cancel();}};
       inp.onkeydown=keyer;inp.onblur=maybeCommit;
       if(coEl){coEl.onkeydown=keyer;coEl.onblur=maybeCommit;}
       el.querySelector("#ed-namedone").onclick=commit;
@@ -482,9 +490,21 @@
     }
     if(leaf){
       var es=el.querySelector("#ed-s"),ee=el.querySelector("#ed-e"),epr=el.querySelector("#ed-pr"),
-          prv=el.querySelector("#ed-prv"),fillEl=el.querySelector("#ed-fill"),badge=el.querySelector("#ed-badge");
-      es.onchange=function(){if(!es.value)return;n.s=es.value;if(idx(n.s)>idx(n.e))n.e=n.s;renderSave();};
-      ee.onchange=function(){if(!ee.value)return;n.e=ee.value;if(idx(n.e)<idx(n.s))n.s=n.e;renderSave();};
+          prv=el.querySelector("#ed-prv"),fillEl=el.querySelector("#ed-fill"),badge=el.querySelector("#ed-badge"),
+          durEl=el.querySelector("#ed-dur");
+      var syncDur=function(){if(durEl)durEl.value=String(idx(n.e)-idx(n.s)+1);};
+      // 기간(일) 편집: 시작일은 그대로 두고 종료일 = 시작일 + (기간 - 1)로 이동
+      if(durEl){
+        durEl.onchange=function(){var d=parseInt(durEl.value,10);if(!d||d<1){syncDur();return;}n.e=idx2d(idx(n.s)+d-1);ee.value=n.e;syncDur();repaint();};
+        durEl.onkeydown=function(ev){if(ev.key==="Enter"){ev.preventDefault();durEl.blur();}};
+      }
+      // change에서는 값만 반영하고 막대만 다시 그린다. 날짜를 타이핑하는 도중(연도 "2026"을
+      // 칠 때 등) 중간값으로 순서 보정을 하면 "종료일 입력 중 시작일이 바뀌는" 버그가 난다.
+      // 시작>종료 순서 보정은 편집이 끝난 뒤(blur)에만 수행한다.
+      es.onchange=function(){if(!es.value)return;n.s=es.value;syncDur();repaint();};
+      ee.onchange=function(){if(!ee.value)return;n.e=ee.value;syncDur();repaint();};
+      es.onblur=function(){if(es.value&&ee.value&&idx(n.s)>idx(n.e)){n.e=n.s;ee.value=n.e;syncDur();repaint();}};
+      ee.onblur=function(){if(es.value&&ee.value&&idx(n.e)<idx(n.s)){n.s=n.e;es.value=n.s;syncDur();repaint();}};
       epr.oninput=function(){n.pr=parseInt(epr.value);prv.textContent=n.pr+"%";fillEl.style.width=n.pr+"%";if(badge)badge.textContent=status(n.pr);repaint();};
     }
     el.querySelector("#ed-add").onclick=function(){addSibling(n);};
@@ -494,7 +514,10 @@
     if(canUp)el.querySelector("#ed-up").onclick=function(){moveSib(n,-1);};
     if(canDown)el.querySelector("#ed-down").onclick=function(){moveSib(n,1);};
     el.querySelector("#ed-move").onchange=function(){var v=this.value;if(v==="__none")return;if(v==="__top"){moveTo(n,null);}else{moveTo(n,MT[parseInt(v)].node);}};
-    el.querySelector("#ed-del").onclick=function(){deleteNode(n);};
+    el.querySelector("#ed-del").onclick=function(){
+      var sub=isLeaf(n)?"":" 하위 "+n.children.length+"개 항목도 함께 삭제됩니다.";
+      if(!confirm("「"+n.name+"」을(를) 삭제할까요?"+sub))return;
+      deleteNode(n);};
   }
 
   function stats(){
@@ -523,6 +546,92 @@
   document.getElementById("expandBtn").onclick=function(){ST.collapsedNodes=[];render();};
   document.getElementById("collapseBtn").onclick=function(){ST.collapsedNodes=allParents();render();};
   function toast(t,ok){var m=document.getElementById("saveMsg");m.style.color=ok?"var(--accent)":"var(--danger)";m.textContent=t;setTimeout(function(){if(m.textContent===t)m.textContent="";},2600);}
+
+  // ── CSV 내보내기/가져오기 (Lodestar components/wbs-gantt.ts 이식) ──
+  // 계층은 WBS 번호(1.2.3의 점 개수 = 깊이)로 표현 — 엑셀에서 편집해 그대로 되넣을 수 있다.
+  // 상위(자식 있는) 행의 날짜·진행률은 하위 롤업 파생값이라 비워서 내보내고, 가져올 때도 무시한다.
+  function exportCsv(){
+    var q=function(s){return /[",\n\t]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+    var lines=["WBS,이름,시작일,종료일,진행률(%)"];
+    flattenAll().forEach(function(R){
+      var n=R.node,leaf=isLeaf(n);
+      lines.push([R.code,q(n.name||""),leaf?(n.s||""):"",leaf?(n.e||""):"",leaf?String(n.pr||0):""].join(","));
+    });
+    // BOM: 한글 엑셀이 UTF-8 CSV를 제대로 열게 하는 표식 — 빼면 이름이 깨진다
+    var blob=new Blob([String.fromCharCode(0xfeff)+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+    var a=document.createElement("a");a.href=URL.createObjectURL(blob);
+    a.download="gantt_"+TODAY+".csv";document.body.appendChild(a);a.click();a.remove();
+    setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
+    toast("CSV로 내보냈습니다",true);
+  }
+  /** 콤마 CSV(따옴표 필드 지원)·탭 TSV 공용 파서. 셀 안 줄바꿈·"" 이스케이프 처리. */
+  function parseDelimited(text){
+    var qq=false,tabs=0,commas=0,i,ch;
+    for(i=0;i<text.length;i++){ch=text[i];
+      if(ch==='"'){if(qq&&text[i+1]==='"')i++;else qq=!qq;}
+      else if(!qq){if(ch==="\t")tabs++;else if(ch===",")commas++;}}
+    var delim=tabs>commas?"\t":",";
+    var rows=[],row=[],cell="",inQ=false;
+    for(i=0;i<text.length;i++){ch=text[i];
+      if(inQ){
+        if(ch==='"'){if(text[i+1]==='"'){cell+='"';i++;}else inQ=false;}
+        else cell+=ch;
+      }else if(ch==='"'&&cell==="")inQ=true;
+      else if(ch===delim){row.push(cell);cell="";}
+      else if(ch==="\n"||ch==="\r"){
+        if(ch==="\r"&&text[i+1]==="\n")i++;
+        row.push(cell);cell="";
+        if(row.some(function(c){return c.trim();}))rows.push(row);
+        row=[];
+      }else cell+=ch;
+    }
+    row.push(cell);
+    if(row.some(function(c){return c.trim();}))rows.push(row);
+    return rows;
+  }
+  /** "2026-08-06"·"2026.8.6"·"2026/08/06"·한글 엑셀 "2026. 8. 6." → "YYYY-MM-DD". 아니면 undefined.
+   *  달력 검증 포함 — 2-30 같은 무효 날짜가 조용히 롤오버되지 않게 미정 처리한다. */
+  function parseCsvDate(s){
+    var m=s.replace(/\s/g,"").match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})\.?$/);
+    if(!m)return undefined;
+    var y=+m[1],mo=+m[2],d=+m[3];
+    var dt=new Date(Date.UTC(y,mo-1,d));
+    if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==mo-1||dt.getUTCDate()!==d)return undefined;
+    return y+"-"+pad(mo)+"-"+pad(d);
+  }
+  /** 인코딩 자동 판별: UTF-16 BOM(엑셀 "유니코드 텍스트" .txt) → UTF-8 → 한글 엑셀 레거시(EUC-KR) 순 */
+  function readTextFile(f){
+    return f.arrayBuffer().then(function(buf){
+      var b=new Uint8Array(buf);
+      if(b[0]===0xff&&b[1]===0xfe)return new TextDecoder("utf-16le").decode(buf);
+      if(b[0]===0xfe&&b[1]===0xff)return new TextDecoder("utf-16be").decode(buf);
+      try{return new TextDecoder("utf-8",{fatal:true}).decode(buf);}
+      catch(e){return new TextDecoder("euc-kr").decode(buf);}
+    });
+  }
+  function importRows(rows){
+    var roots=[],stack=[],added=0;
+    rows.forEach(function(cells,ri){
+      var code=(cells[0]||"").trim(),name=(cells[1]||"").trim();
+      // 헤더 행: 라벨 단어와 정확히 일치할 때만 건너뜀
+      if(ri===0&&(/^(wbs|no\.?|번호)$/i.test(code)||/^(이름|제목|업무명?|작업명?|name|title)$/i.test(name)))return;
+      if(!name)return;
+      var depth=Math.min(code?code.split(".").length-1:0,stack.length);
+      var node={name:name,pr:Math.min(100,Math.max(0,Math.round(parseFloat((cells[4]||"").replace(/[^\d.]/g,""))||0)))};
+      var s=parseCsvDate(cells[2]||""),e=parseCsvDate(cells[3]||"");
+      if(s||e){s=s||e;e=e||s;if(e<s){var t=s;s=e;e=t;}node.s=s;node.e=e;}
+      if(depth===0)roots.push(node);
+      else{var p=stack[depth-1];if(!p.children)p.children=[];p.children.push(node);}
+      stack.length=depth;stack[depth]=node;added++;
+    });
+    // 자식이 생긴 행의 날짜·진행률은 파생값이므로 버린다(롤업이 하위 기준으로 계산)
+    roots.forEach(function(r){stripParentDates(r);if(!r.col)r.col=nextColor();if(r.co===undefined)r.co="";});
+    if(!roots.length){toast("가져올 항목이 없습니다 — WBS·이름 열을 확인하세요",false);return;}
+    if(!confirm(roots[0].name+(added>1?" 외 "+(added-1)+"개":"")+" 항목을 추가할까요?\n기존 항목은 그대로 유지됩니다."))return;
+    roots.forEach(function(r){DATA.push(r);});
+    ST.editing=false;renderSave();
+    toast(added+"개 항목을 가져왔습니다",true);
+  }
   document.getElementById("exportBtn").onclick=function(){
     saveNow(function(serverOk,localOk){
       if(SERVER)toast(serverOk?"서버 파일에 저장되었습니다":"서버 저장에 실패했습니다 · 브라우저 백업만 유지됩니다",!!serverOk);
@@ -545,6 +654,49 @@
     if(saveTimer!==null){clearTimeout(saveTimer);saveTimer=null;
       if(SERVER&&navigator.sendBeacon){try{navigator.sendBeacon(API,new Blob([JSON.stringify(DATA)],{type:"text/plain"}));}catch(e){}}}
   });
+  document.getElementById("csvExpBtn").onclick=function(){exportCsv();};
+  document.getElementById("csvImpBtn").onclick=function(){document.getElementById("csvFile").click();};
+  document.getElementById("csvFile").onchange=function(){
+    var f=this.files&&this.files[0];this.value="";
+    if(!f)return;
+    readTextFile(f).then(function(text){importRows(parseDelimited(text));})
+      .catch(function(){toast("파일을 읽지 못했습니다",false);});
+  };
+
+  // 키보드 조작 (Lodestar components/wbs-gantt.ts 이식):
+  // ↑/↓ = 행 선택 이동, ←/→ = 진행률 ±5%p(말단만),
+  // Tab = 이름 수정, Ctrl(⌘)+D = 기간 수정, Enter+Ctrl/Shift = 하위/형제 추가.
+  // 상세 패널 입력 중·이름 편집 중엔 가로채지 않는다.
+  document.addEventListener("keydown",function(ev){
+    var t=ev.target;
+    var typing=t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.tagName==="SELECT"||t.isContentEditable);
+    if(typing||ST.editing)return;
+    if(!ST.sel||!ST.sel.node)return;
+    var k=ev.key,n=ST.sel.node;
+    if(k==="Enter"&&(ev.ctrlKey||ev.metaKey)){ev.preventDefault();addChild(n);return;}
+    if(k==="Enter"&&ev.shiftKey){ev.preventDefault();addSibling(n);return;}
+    if(k==="Tab"&&!ev.ctrlKey&&!ev.metaKey&&!ev.altKey&&!ev.shiftKey){ev.preventDefault();ST.editing=true;detail();focusName();return;}
+    if((k==="d"||k==="D")&&(ev.ctrlKey||ev.metaKey)&&!ev.altKey&&!ev.shiftKey){
+      ev.preventDefault();var dur=document.getElementById("ed-dur");if(dur){dur.focus();dur.select();}return;
+    }
+    if(k!=="ArrowUp"&&k!=="ArrowDown"&&k!=="ArrowLeft"&&k!=="ArrowRight")return;
+    ev.preventDefault();
+    if(k==="ArrowUp"||k==="ArrowDown"){
+      var rows=flatten(),i=-1,q;
+      for(q=0;q<rows.length;q++){if(rows[q].node===n){i=q;break;}}
+      if(i<0)return;
+      var j=i+(k==="ArrowDown"?1:-1);
+      if(j<0||j>=rows.length)return;
+      ST.sel={node:rows[j].node};render();
+      var selEl=document.querySelector(".grow.sel");
+      if(selEl&&selEl.scrollIntoView)selEl.scrollIntoView({block:"nearest"});
+    }else{
+      if(!isLeaf(n))return; // 상위 행 진행률은 하위 롤업 파생값
+      n.pr=Math.min(100,Math.max(0,(n.pr||0)+(k==="ArrowRight"?5:-5)));
+      renderSave();
+    }
+  });
+
   function init(){
     if(typeof fetch==="function"){
       fetch(API).then(function(r){if(r.ok){SERVER=true;return r.json();}return null;})
